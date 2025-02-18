@@ -109,6 +109,7 @@ def convert_llava_to_hf(model_id, pytorch_dump_folder_path, push_to_hub=False):
         "lmms-lab/llava-onevision-qwen2-7b-ov",
         "lmms-lab/llava-onevision-qwen2-7b-si",
         "lmms-lab/llava-onevision-qwen2-7b-ov-chat",
+        "lmms-lab/LLaVA-Video-7B-Qwen2",
     ]:
         text_model_id = "Qwen/Qwen2-7B-Instruct"
     elif model_id in [
@@ -282,10 +283,17 @@ def convert_llava_to_hf(model_id, pytorch_dump_folder_path, push_to_hub=False):
                 dtype=torch.float32,
                 device=device,
             )
+        elif model_id == "lmms-lab/LLaVA-Video-7B-Qwen2":
+            # Not yet checked against reference
+            expected_slice = torch.tensor(
+                [[1.8369, 3.4141, 1.2607], [-1.1689, -1.5059, 1.4453], [3.0625, 6.0078, 11.7266]],
+                dtype=torch.float32,
+                device=device,
+            )
         else:
             raise ValueError(f"Model {model_id} not supported")
 
-        assert torch.allclose(outputs.logits[0, :3, :3], expected_slice, atol=1e-4)
+        assert torch.allclose(outputs.logits[0, :3, :3].float(), expected_slice, atol=1e-4)
         print("Logits are ok!")
 
     # verify generation
@@ -315,6 +323,8 @@ def convert_llava_to_hf(model_id, pytorch_dump_folder_path, push_to_hub=False):
         expected_text = "system\nYou are a helpful assistant.\nuser\n\nWhat is shown in this image?\nassistant\nThe image shows a radar chart, also known as a spider chart or a star chart, which is used to display multivariate data in the form of a two-dimensional chart of three or more quantitative variables represented on axes starting from the same point. Each axis represents a different variable, and the values are plotted along these axes.\n\nIn this particular radar chart, there are multiple lines representing different models or systems, each distinguished by a different color and labeled with a name such as BLIP-2, In"
     elif model_id == "lmms-lab/llava-onevision-qwen2-72b-ov-chat":
         expected_text = "system\nYou are a helpful assistant.\nuser\n\nWhat is shown in this image?\nassistant\nThe image is a radar chart comparing the performance of different models on various multimodal benchmarks. The models compared are BLIP-2, InstructBLIP, POPE, QWen-VL-Chat, and LLava-1.5. The benchmarks include VQAv2, GQA, TextVQA, SQA-IMG, VizWiz, MM-IMDb, MM-VQA, MM-IMDb-CN, MM-IMDb-EN, MM-"
+    elif model_id == "lmms-lab/LLaVA-Video-7B-Qwen2":
+        expected_text = "system\nYou are a helpful assistant.\nuser\n\nWhat is shown in this image?\nassistant\nThis image is a radar chart comparing the performance of different models on various benchmarks. The chart shows the scores of each model on different tasks such as VQA2, GQA, and TextVQA, among others. The models compared include BLIP-2, InstructBLIP, Qwen-VL-Chat, and LLaVA-1.5. The scores are represented by the length of the lines extending from the center of the chart to the edge, with longer lines indicating higher"
     else:
         raise ValueError(f"Model {model_id} not supported")
 
@@ -340,7 +350,7 @@ def convert_llava_to_hf(model_id, pytorch_dump_folder_path, push_to_hub=False):
 
     # make sure image_sizes are the same
     # as otherwise batched generation doesn't work
-    inputs.image_sizes[1] = inputs.image_sizes[0]
+    # inputs.image_sizes[1] = inputs.image_sizes[0]
 
     print("Batched generation...")
     output_ids = model.generate(
